@@ -1,0 +1,20 @@
+# Chain A hotspot residues for Phase 1 RFdiffusion PPI design
+# Derived from per-residue SASA analysis (see ../README.md and trial_5 SASA output).
+# Only residues with rSASA > 30% in the hexamer context are listed (solvent-accessible).
+# Buried residues (108 = THR rSASA 0.03, 110 = ASN rSASA 0.00) are omitted.
+
+A105   # LYS, rSASA 0.46
+A107   # VAL, rSASA 0.50
+A109   # GLN, rSASA 0.54
+A111   # ASP, rSASA 0.43
+A114   # THR, rSASA 0.46
+A115   # THR, rSASA 0.30 (borderline; kept for sequence-end anchor)
+
+# Notes for tuning:
+# - If RFdiffusion ignores some hotspots (low contact frequency in Phase 1 output),
+#   drop them from the list.
+# - The hotspot list is used by RFdiffusion only as a bias, not a constraint —
+#   the binder may make contacts elsewhere too.
+# - If we later switch the asymmetric unit to chain B (or C, E), update this list
+#   accordingly. Within B/C/E group, the buried residues are different (112-114),
+#   so the hotspot residue set would change.
