@@ -30,6 +30,7 @@ check "$RFD_VENV/bin/python -c 'import torch,e3nn,dgl,hydra'" "  RFdiffusion dep
 check "$RFD_VENV/bin/python -c 'import torch; assert torch.cuda.is_available()'" "  torch CUDA available"
 check "[ -x $AF2_VENV/bin/python ]" "AF2 venv python ($AF2_VENV/bin/python)"
 check "$AF2_VENV/bin/python -c 'import jax,jaxlib'" "  AF2 deps import (jax,jaxlib)"
+check "$AF2_VENV/bin/python -c 'import numpy,Bio,freesasa'" "  metrics deps import (numpy,biopython,freesasa)"
 
 echo
 echo "=== GPU availability ==="

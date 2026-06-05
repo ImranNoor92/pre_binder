@@ -13,3 +13,6 @@ __pycache__/
 # Scratch
 *.tmp
 *.swp
+
+# local notes / chat dumps (not part of the pipeline)
+context/

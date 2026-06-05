@@ -18,12 +18,12 @@ The hexamer has exact three-fold rotational symmetry about an axis through `(0, 
 |------:|--------|--------------|--------|--------|
 | 1  | `scripts/01_pilot_rfdiffusion.sh` | Design ~10 single-subunit binder backbones against chain A (B–F as fixed steric context, hotspots `A105,107,109,111,114,115`) | RFdiffusion (`.venv-rfd-gpu`) | ✅ **runnable** |
 | 2a | `scripts/02_trimerize_replicate.py` | Replicate each subunit by C3 (0°/120°/240°) about the hexamer axis; fuse with `(GGGGS)`-type linkers | pure Python | ✅ **runnable** |
-| 2b | `scripts/03_af2_validation.sh` | AF2-multimer predict hexamer+trimer; apply 4 filters (binder pLDDT > 0.70, interface pTM > 0.65, per-subunit interface SASA > 200 Å², RMSD vs design < 3 Å) | AlphaFold (`.venv-af2`) | ⚠️ **skeleton** — AF2 call + filters not yet wired |
-| 3  | `scripts/04_proteinmpnn.sh` | Sequence design with the three subunits **tied** (preserves homotrimer symmetry); target chains fixed | ProteinMPNN (`.venv-rfd-gpu`) | ⚠️ env wired; tied/fixed/chain JSONLs not yet generated |
-| 4  | `scripts/05_af2_revalidation.sh` | Re-predict each MPNN sequence; re-apply the 4 filters; rank survivors | AlphaFold (`.venv-af2`) | ⚠️ **skeleton** — reuses Phase 2b AF2 |
-| Acid test | (in `05`) | Re-predict each survivor against a single dimer pair (A+E only); a true hexamer-specific binder must lose ≥ 0.15 interface pTM | AlphaFold | ⚠️ described, not yet implemented |
+| 2b | `scripts/03_af2_validation.sh` | Backbone gate: 1 quick MPNN seq → AF2-multimer (hexamer+trimer) → 4 filters (binder pLDDT > 70, interface pTM > 0.65, per-subunit interface SASA > 200 Å², RMSD vs design < 3 Å) | ProteinMPNN + AlphaFold | ✅ **wired** |
+| 3  | `scripts/04_proteinmpnn.sh` | Sequence design of the subunit (8 seqs); one subunit designed and reused in all 3 copies = tied positions for a replication-built homotrimer; target chains fixed | ProteinMPNN (`.venv-rfd-gpu`) | ✅ **wired** |
+| 4  | `scripts/05_af2_revalidation.sh` | AF2 each MPNN sequence; re-apply 4 filters; rank survivors by combined score | AlphaFold (`.venv-af2`) | ✅ **wired** |
+| Acid test | (in `05`) | Re-predict each survivor against one dimer pair (A+E only); require interface pTM to drop ≥ 0.15 — the operational test of hexamer-specificity | AlphaFold | ✅ **wired** |
 
-**Runnable today:** Phases 1 and 2a. Phases 2b/3/4 need their AF2 invocation, the MPNN tied-positions JSONL builder, and the dimer-only acid test implemented before an end-to-end run. The reference orchestration to adapt from is `/data/rfdiffusion/trial_2B/master_pipeline/`.
+**Status:** all phases wired and runnable. Shared helpers live in [`scripts/lib/`](scripts/lib/); see "Where … are called from" below. Phases 1 and 2a have been run (10 backbones, 10 trimers); the AF2 phases are compute-heavy (see the efficiency note).
 
 ---
 
@@ -46,6 +46,31 @@ bash scripts/00_check_env.sh   # checks binaries, real module imports, CUDA, wei
 
 ---
 
+## Where RFdiffusion / ProteinMPNN / AF2 are called from
+
+Nothing is vendored into this repo — every engine is invoked from the shared
+`/data/rfdiffusion` and `/data/alphafold_*` installs. All call-sites are defined once in
+[`scripts/lib/common.sh`](scripts/lib/common.sh); the phase scripts source that file.
+
+| Engine | Env (interpreter) | Code / entry point | Weights / DB | Invoked by |
+|--------|-------------------|--------------------|--------------|------------|
+| **RFdiffusion** | `/data/rfdiffusion/.venv-rfd-gpu/bin/python` | `/data/rfdiffusion/scripts/run_inference.py` | `/data/rfdiffusion/models/Complex_base_ckpt.pt` (passed via `inference.ckpt_override_path`) | `scripts/01_pilot_rfdiffusion.sh` |
+| **ProteinMPNN** | `/data/rfdiffusion/.venv-rfd-gpu/bin/python` | `/data/rfdiffusion/external/ProteinMPNN/protein_mpnn_run.py` (+ `helper_scripts/`) | bundled `vanilla_model_weights/` | `scripts/lib/mpnn_subunit.sh` (used by Phases 2b & 3) |
+| **AlphaFold-multimer** | `/data/rfdiffusion/.venv-af2/bin/python` | `/data/alphafold_code/alphafold/run_alphafold.py` via `…/trials/trial_1/run_alphafold_wrapper.py` (injects it on `PYTHONPATH`) | `/data/alphafold_db` (`model_preset=multimer`, `full_dbs`) | `scripts/lib/run_af2.sh` (used by Phases 2b & 4) |
+
+Why two Python envs: `.venv-rfd-gpu` carries torch/e3nn/dgl (RFdiffusion + ProteinMPNN);
+`.venv-af2` carries jax/haiku/openmm (AlphaFold). They are mutually exclusive, so each phase
+shells out to the helper that runs under the correct interpreter — orchestration
+([`scripts/lib/af2_phase.py`](scripts/lib/af2_phase.py)) runs under `.venv-af2` and calls the
+MPNN helper as a subprocess.
+
+> **Efficiency note:** AF2 re-derives the target (chain A–F) MSA per output directory. The six
+> target chains are identical, so within one prediction the MSA is computed once, but it is
+> recomputed across designs. For large runs, precompute the target MSA once and reuse it, or
+> drop to `--db_preset=reduced_dbs` in `run_af2.sh`.
+
+---
+
 ## Quick start
 
 ```bash
@@ -54,13 +79,12 @@ cd /data/binder_software/pre-binder
 bash   scripts/00_check_env.sh                                 # ~30 s — must be all ✓
 bash   scripts/01_pilot_rfdiffusion.sh  2>&1 | tee logs/01.log # ~2–4 h on 1 GPU → 10 backbones
 python scripts/02_trimerize_replicate.py                       # ~1 min  → trimerized PDBs
-# Phases 2b–4 require the AF2/MPNN wiring noted above before they will run end-to-end:
-bash   scripts/03_af2_validation.sh     2>&1 | tee logs/03.log
-bash   scripts/04_proteinmpnn.sh        2>&1 | tee logs/04.log
-bash   scripts/05_af2_revalidation.sh   2>&1 | tee logs/05.log
+GPU=0  bash scripts/03_af2_validation.sh   2>&1 | tee logs/03.log # Phase 2b gate (MPNN+AF2 filter)
+GPU=0  bash scripts/04_proteinmpnn.sh      2>&1 | tee logs/04.log # Phase 3   (8 seqs/survivor)
+GPU=0  bash scripts/05_af2_revalidation.sh 2>&1 | tee logs/05.log # Phase 4   (AF2 + acid test + rank)
 ```
 
-Useful overrides for Phase 1: `GPU=0` (default 1), `NUM_DESIGNS=N`, `BINDER_MIN`/`BINDER_MAX` (default 60–90). Each script is idempotent — it skips work whose output already exists.
+Overrides: Phase 1 takes `GPU` (default 1), `NUM_DESIGNS`, `BINDER_MIN`/`BINDER_MAX` (default 60–90); the AF2/MPNN phases take `GPU` (default 0) and `NUM_SEQ_PER_BACKBONE`/`NUM_SEQ` (default 8). Every script is idempotent — it skips work whose output already exists, so a re-run resumes.
 
 ---
 
