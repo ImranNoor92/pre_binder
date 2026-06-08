@@ -43,6 +43,22 @@ def read_ca(pdb: Path, chain: str):
     return out
 
 
+def detect_binder_chain(pdb: Path, binder_len: int) -> str:
+    """AF2 relabels output chains (e.g. inputs A-F,G come out B-G,H). The binder is the chain
+    whose CA count matches the fused-trimer length; fall back to the last chain seen."""
+    ca, order = {}, []
+    for line in pdb.read_text().splitlines():
+        if line.startswith("ATOM") and line[12:16].strip() == "CA":
+            c = line[21]
+            if c not in ca:
+                order.append(c)
+            ca[c] = ca.get(c, 0) + 1
+    for c, n in ca.items():
+        if n == binder_len:
+            return c
+    return order[-1] if order else "A"
+
+
 def subunit_resranges(layout):
     """1-based residue ranges of the 3 subunits within the binder chain (linkers excluded)."""
     L = layout["binder"]["len"]
@@ -80,11 +96,11 @@ def subunit_dsasa(pdb: Path, binder_chain: str, ranges):
     return results
 
 
-def rmsd_to_design(pred_pdb: Path, design_pdb: Path, binder_chain: str, ranges):
+def rmsd_to_design(pred_pdb: Path, design_pdb: Path, pred_chain: str, design_chain: str, ranges):
     """CA-RMSD of predicted binder vs trimerized design over subunit residues (Kabsch)."""
     from Bio.SVDSuperimposer import SVDSuperimposer
-    pc = read_ca(pred_pdb, binder_chain)
-    dc = read_ca(design_pdb, binder_chain)
+    pc = read_ca(pred_pdb, pred_chain)
+    dc = read_ca(design_pdb, design_chain)
     common = [r for (lo, hi) in ranges for r in range(lo, hi + 1) if r in pc and r in dc]
     if len(common) < 3:
         return None
@@ -120,8 +136,10 @@ def main():
     ptm = float(result.get("ptm", float("nan")))
 
     ranges = subunit_resranges(layout)
-    sasa = subunit_dsasa(pred_pdb, args.binder_chain, ranges) if pred_pdb.exists() else None
-    rmsd = (rmsd_to_design(pred_pdb, Path(args.design_pdb), args.binder_chain, ranges)
+    # AF2 relabels chains, so detect the binder chain in the prediction; the design PDB uses --binder-chain.
+    pred_binder = detect_binder_chain(pred_pdb, b["len"]) if pred_pdb.exists() else args.binder_chain
+    sasa = subunit_dsasa(pred_pdb, pred_binder, ranges) if pred_pdb.exists() else None
+    rmsd = (rmsd_to_design(pred_pdb, Path(args.design_pdb), pred_binder, args.binder_chain, ranges)
             if args.design_pdb and pred_pdb.exists() else None)
 
     checks = {

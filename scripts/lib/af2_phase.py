@@ -99,10 +99,15 @@ def cmd_gate(args):
         name = bb.stem
         trimer = OUT / "02a_trimerized" / f"{name}_trimer.pdb"
         print(f"[gate] {name}")
-        seqs = mpnn_seqs(bb, mpnn_dir, 1, args.gpu)
-        if not seqs:
-            print(f"  ! no MPNN seq for {name}"); continue
-        m = af2_predict(seqs[0], HEX, f"{name}_hex", af2_root, trimer, args.gpu)
+        try:
+            seqs = mpnn_seqs(bb, mpnn_dir, 1, args.gpu)
+            if not seqs:
+                print(f"  ! no MPNN seq for {name}"); continue
+            m = af2_predict(seqs[0], HEX, f"{name}_hex", af2_root, trimer, args.gpu)
+        except Exception as e:                       # one bad design must not kill the run
+            print(f"  ! {name} FAILED: {e}")
+            rows.append({"design": name, "error": str(e)[:200], "pass": False})
+            continue
         m["design"] = name
         rows.append(m)
         print(f"  plddt={m['binder_plddt']} iptm={m['iptm']} "
@@ -136,7 +141,12 @@ def cmd_final(args):
         for i, seq in enumerate(seqs):
             tag = f"{name}_s{i}"
             print(f"[final] {tag}")
-            m = af2_predict(seq, HEX, f"{tag}_hex", af2_root, trimer, args.gpu)
+            try:
+                m = af2_predict(seq, HEX, f"{tag}_hex", af2_root, trimer, args.gpu)
+            except Exception as e:
+                print(f"  ! {tag} FAILED: {e}")
+                rows.append({"design": name, "seq_idx": i, "error": str(e)[:200], "hex_pass": False, "specific": False, "score": 0.0})
+                continue
             row = {"design": name, "seq_idx": i, **{f"hex_{k}": v for k, v in m.items()
                    if k in ("binder_plddt", "iptm", "ptm", "min_subunit_sasa", "rmsd_to_design", "pass")}}
             row["hex_sum_sasa"] = sum(m["subunit_sasa"]) if m["subunit_sasa"] else 0
