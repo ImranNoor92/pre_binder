@@ -30,6 +30,32 @@ HEX = "ABCDEF"
 DIMER = "AE"          # one dimer pair (A<->E) for the specificity acid test
 IPTM_DROP_MIN = 0.15  # required interface-pTM drop hexamer->dimer for hexamer-specificity
 
+# The 6 target chains are identical, so their (expensive, full_dbs) MSA is computed ONCE and
+# reused for every design. AF2 keys each unique-sequence MSA under the group's first chain;
+# the target's representative is always chain "A". The binder chain (G) MSA is computed fresh.
+# If the cache is ever stale/wrong, AF2 simply recomputes (use_precomputed_msas) — never fails.
+MSA_CACHE = OUT / "_msa_cache" / "target_A"
+TARGET_MSA_DIRNAME = "A"
+
+
+def seed_target_msa(af2_dir: Path):
+    if not MSA_CACHE.is_dir():
+        return
+    dest = af2_dir / "msas" / TARGET_MSA_DIRNAME
+    dest.mkdir(parents=True, exist_ok=True)
+    for f in MSA_CACHE.iterdir():
+        if not (dest / f.name).exists():
+            shutil.copy(f, dest / f.name)
+
+
+def save_target_msa(af2_dir: Path):
+    src = af2_dir / "msas" / TARGET_MSA_DIRNAME
+    if MSA_CACHE.exists() or not src.is_dir():
+        return
+    MSA_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, MSA_CACHE)
+    print(f"  cached target MSA -> {MSA_CACHE}")
+
 
 def sh(cmd, **kw):
     return subprocess.run(cmd, check=True, text=True, **kw)
@@ -52,8 +78,10 @@ def af2_predict(subunit_seq: str, target_chains: str, tag: str,
     sh([PY, str(LIB / "seqtools.py"), "build-fasta",
         "--subunit-seq", subunit_seq, "--target-pdb", str(TARGET_PDB),
         "--target-chains", target_chains, "--out", str(fasta), "--layout", str(layout)])
-    sh([str(LIB / "run_af2.sh"), str(fasta), str(af2_root), str(gpu)])
     af2_dir = af2_root / tag
+    seed_target_msa(af2_dir)                       # reuse cached target MSA if present
+    sh([str(LIB / "run_af2.sh"), str(fasta), str(af2_root), str(gpu)])
+    save_target_msa(af2_dir)                        # populate cache from the first full run
     cmd = [PY, str(LIB / "af2_metrics.py"), "--af2-dir", str(af2_dir), "--layout", str(layout)]
     if design_pdb:
         cmd += ["--design-pdb", str(design_pdb)]

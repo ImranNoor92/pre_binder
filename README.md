@@ -64,10 +64,37 @@ shells out to the helper that runs under the correct interpreter — orchestrati
 ([`scripts/lib/af2_phase.py`](scripts/lib/af2_phase.py)) runs under `.venv-af2` and calls the
 MPNN helper as a subprocess.
 
-> **Efficiency note:** AF2 re-derives the target (chain A–F) MSA per output directory. The six
-> target chains are identical, so within one prediction the MSA is computed once, but it is
-> recomputed across designs. For large runs, precompute the target MSA once and reuse it, or
-> drop to `--db_preset=reduced_dbs` in `run_af2.sh`.
+> **Target-MSA reuse (implemented):** the six target chains are identical, so their (expensive,
+> `full_dbs`) MSA is computed once on the first design, cached at `outputs/_msa_cache/target_A/`,
+> and reused for every later design (`af2_phase.py:seed_target_msa`/`save_target_msa`). Only the
+> de-novo binder chain's MSA is recomputed per design. If the cache is stale, AF2 just recomputes
+> (`--use_precomputed_msas`) — it never fails. `reduced_dbs` is *not* available here (`small_bfd`
+> is not downloaded). The remaining per-design cost is the binder MSA; installing
+> `af2_initial_guess` (single-sequence + templating) would remove that too.
+
+---
+
+## Running long jobs (so they survive logout)
+
+The AF2 phases run for hours. A plain background job **will be killed when your login session
+ends** (this happened once — see `RUNLOG.md` 2026-06-05). Two safeguards are now in place:
+
+1. **Lingering enabled** — `loginctl enable-linger $USER` lets your processes outlive logout.
+2. **Run inside tmux** via the chained launcher:
+
+```bash
+cd /data/binder_software/pre-binder
+tmux new-session -d -s prebinder \
+  "GPU=0 bash scripts/run_all.sh 2>&1 | tee logs/run_all_$(date +%Y%m%d_%H%M%S).log"
+
+tmux attach -t prebinder     # watch it    (detach: Ctrl-b then d)
+tmux ls                      # is it alive?
+tail -f logs/run_all_*.log   # or just follow the log
+```
+
+`run_all.sh` chains Phase 2b → 3 → 4 and appends a timestamped block to **`RUNLOG.md`** at start
+and after each phase. Every run's inputs, params, and changes are recorded there — keep it
+append-only. To run a single phase instead, call its `scripts/0X_*.sh` directly (see below).
 
 ---
 
