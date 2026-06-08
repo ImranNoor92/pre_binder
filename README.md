@@ -76,25 +76,38 @@ MPNN helper as a subprocess.
 
 ## Running long jobs (so they survive logout)
 
-The AF2 phases run for hours. A plain background job **will be killed when your login session
-ends** (this happened once — see `RUNLOG.md` 2026-06-05). Two safeguards are now in place:
-
-1. **Lingering enabled** — `loginctl enable-linger $USER` lets your processes outlive logout.
-2. **Run inside tmux** via the chained launcher:
+The AF2 phases run for hours. A plain background job — even under `tmux` — **gets killed when
+the launching shell's process tree is torn down** (both failures are recorded in `RUNLOG.md`,
+2026-06-05 logout and 2026-06-08 tmux-reaped). The durable fix is to hand the job to the
+**systemd user manager** so it's owned by `user@.service`, not by your shell:
 
 ```bash
 cd /data/binder_software/pre-binder
-tmux new-session -d -s prebinder \
-  "GPU=0 bash scripts/run_all.sh 2>&1 | tee logs/run_all_$(date +%Y%m%d_%H%M%S).log"
+loginctl enable-linger "$USER"          # once: lets user processes outlive logout
 
-tmux attach -t prebinder     # watch it    (detach: Ctrl-b then d)
-tmux ls                      # is it alive?
-tail -f logs/run_all_*.log   # or just follow the log
+systemd-run --user --unit=prebinder --collect \
+  --working-directory="$PWD" --setenv=GPU=0 --setenv=NUM_SEQ=8 \
+  bash -c 'exec bash scripts/run_all.sh >> logs/run_all_$(date +%Y%m%d_%H%M%S).log 2>&1'
 ```
 
 `run_all.sh` chains Phase 2b → 3 → 4 and appends a timestamped block to **`RUNLOG.md`** at start
-and after each phase. Every run's inputs, params, and changes are recorded there — keep it
-append-only. To run a single phase instead, call its `scripts/0X_*.sh` directly (see below).
+and after each phase. To run a single phase instead, call its `scripts/0X_*.sh` directly.
+
+### Checking the run (don't trust the log timestamp)
+
+During MSA the log can sit silent for 10–15 min and the GPU shows 0% — that looks dead but
+isn't. Use `scripts/status.sh`, which checks the authoritative signals (systemd unit state +
+whether a `jackhmmer`/`hhblits`/`run_alphafold` worker is burning CPU) and prints a flat verdict:
+
+```bash
+bash scripts/status.sh                 # one-shot: ✅ ALIVE / ⏳ idle / ❌ NOT RUNNING + progress
+watch -n 30 bash scripts/status.sh     # live, refreshing
+
+# bare-bones, no script:
+systemctl --user is-active prebinder   # "active" = alive; anything else = dead/finished
+systemctl --user status  prebinder     # full detail + recent output
+systemctl --user stop    prebinder     # kill it
+```
 
 ---
 
@@ -137,13 +150,18 @@ pre_binder/
 │   ├── 01_workflow.md             # phase-by-phase technical detail
 │   ├── 02_rfdiffusion_contigs.md  # contig syntax for this target
 │   └── 03_validation_filters.md   # AF2 filter rationale
+├── RUNLOG.md                      # append-only, structured per-run log
 ├── scripts/
 │   ├── 00_check_env.sh            # environment + inputs verification
-│   ├── 01_pilot_rfdiffusion.sh    # Phase 1
-│   ├── 02_trimerize_replicate.py  # Phase 2a
-│   ├── 03_af2_validation.sh       # Phase 2b (skeleton)
-│   ├── 04_proteinmpnn.sh          # Phase 3
-│   └── 05_af2_revalidation.sh     # Phase 4 (skeleton)
+│   ├── 01_pilot_rfdiffusion.sh    # Phase 1   RFdiffusion
+│   ├── 02_trimerize_replicate.py  # Phase 2a  C3 trimerize
+│   ├── 03_af2_validation.sh       # Phase 2b  gate (MPNN+AF2 filter)
+│   ├── 04_proteinmpnn.sh          # Phase 3   ProteinMPNN
+│   ├── 05_af2_revalidation.sh     # Phase 4   AF2 + acid test + rank
+│   ├── run_all.sh                 # chains 2b→3→4 (launch via systemd-run)
+│   ├── status.sh                  # ALIVE/DEAD + progress check
+│   └── lib/                       # common.sh, seqtools.py, af2_metrics.py,
+│                                  #   run_af2.sh, mpnn_subunit.sh, af2_phase.py
 ├── inputs/
 │   ├── 1lp3_hexamer_trimmed_fixed.pdb
 │   ├── hotspot_residues.txt
