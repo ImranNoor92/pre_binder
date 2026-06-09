@@ -42,8 +42,9 @@ Status ∈ {OK, FAILED, RUNNING}. The `run_all.sh` launcher auto-appends timesta
 - inputs: 10 RFdiffusion backbones (subunit vs one target chain)
 - params: GPU 0; ProteinMPNN temp 0.1 seed 37, `NUM_SEQ=8`; validator = dl_binder_design `af2_initial_guess` (single-seq, templated, **no MSA**), model_1_ptm, 3 recycles; pass = `pae_interaction<10` AND `plddt_binder>80`
 - Δ from prev: **retired vanilla full-MSA AF2** (OOM + slow + non-reproducing). New env `af2ig` (see `scripts/setup_af2ig.sh`). Order is now standard RFdiffusion→MPNN→AF2. ~2–3 s/design, no MSA so **no OOM**. Per-subunit interface validation; hexamer-specificity rests on the C3 construction (optional multichain re-check later).
-- result: _(running)_ — check `bash scripts/status.sh`; results in `outputs/06_ig/ranked.csv`
-- artifacts: `outputs/03_mpnn_sequences/`, `outputs/06_ig/{inputs,out}/`, `outputs/06_ig/ranked.csv`
+- result: **COMPLETE, 0/80 pass** (80 designs in ~14 min, no crashes/OOM). Binders **fold** well (plddt_binder up to 83; binder_rmsd mostly 1–2 Å) but **don't bind**: best pae_interaction = 25.6, uniformly ~26 across all 80 (need < 10). Bottleneck = the *designs* (epitope / backbones / only 10), not the tooling. Best: `design_9_s4` (pae_i 25.6, plddt 82, rmsd 1.5).
+- next: extend the target hotspot patch; scale backbone count. The C3-trimer hexamer-specificity test is still unbuilt (per-subunit validation only).
+- artifacts: `outputs/06_ig/ranked.csv`, `outputs/06_ig/out/*_af2pred.pdb`, summary figure `outputs/06_ig/run_summary.png`
 
 ---
 
@@ -55,3 +56,6 @@ Status ∈ {OK, FAILED, RUNNING}. The `run_all.sh` launcher auto-appends timesta
 2026-06-08 18:46:45 EDT | RUN START  run_all (gate→mpnn→final)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3744628
 2026-06-09 10:17:22 EDT | RUN START  run_all (mpnn→initial-guess)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3977158
 2026-06-09 10:19:09 EDT | RUN START  run_all (mpnn→initial-guess)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3977741
+2026-06-09 10:25:10 EDT | phase3 mpnn        exit=0
+2026-06-09 10:39:48 EDT | phaseIG initial-guess exit=0
+2026-06-09 10:39:48 EDT | RUN COMPLETE  0 design(s) pass  →  outputs/06_ig/ranked.csv
