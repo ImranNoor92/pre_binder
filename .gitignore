@@ -16,3 +16,6 @@ __pycache__/
 
 # local notes / chat dumps (not part of the pipeline)
 context/
+
+# vendored external tools (clone via scripts/setup_af2ig.sh; not committed)
+external/

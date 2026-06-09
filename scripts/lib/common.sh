@@ -23,8 +23,19 @@ export AF2_WRAPPER=/data/rfdiffusion/trials/trial_1/run_alphafold_wrapper.py   #
 export AF2_DB=/data/alphafold_db
 export AF2_MAX_TEMPLATE_DATE="${AF2_MAX_TEMPLATE_DATE:-2026-05-08}"
 
+# --- af2_initial_guess validator (dl_binder_design) — single-seq, templated, NO MSA ---
+# Set up once with scripts/setup_af2ig.sh. Validates one binder subunit vs one target chain.
+export IG_PY=/home/a-mxn833/mambaforge/envs/af2ig/bin/python
+export IG_DIR="$PROJECT/external/dl_binder_design/af2_initial_guess"
+export IG_PREDICT="$IG_DIR/predict.py"
+# dl_binder_design pass thresholds (per the paper): strong interface pae_interaction<10, plddt_binder>80
+export IG_PAE_MAX="${IG_PAE_MAX:-10}"
+export IG_PLDDT_MIN="${IG_PLDDT_MIN:-80}"
+
 # Binder is always the single non-target chain produced by RFdiffusion.
 export BINDER_CHAIN=G
+# The target chain each subunit is designed against (Phase 1 hotspots are on chain A).
+export TARGET_CHAIN="${TARGET_CHAIN:-A}"
 # Inter-subunit linker used by 02_trimerize_replicate.py (GGGGS GGS = 8 aa).
 export LINKER_SEQ=GGGGSGGS
 

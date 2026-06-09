@@ -19,7 +19,7 @@ if [ -s "$VALID" ]; then
   mapfile -t NAMES < "$VALID"
   echo "→ Phase 3: MPNN on $(wc -l < "$VALID") validated backbone(s), $NSEQ seqs each."
 else
-  mapfile -t NAMES < <(find "$PROJECT/outputs/01_rfdiffusion_pilot" -name 'design_*.pdb' -printf '%f\n' | sed 's/\.pdb$//' | sort)
+  mapfile -t NAMES < <(find "$PROJECT/outputs/01_rfdiffusion_pilot" -maxdepth 1 -name 'design_*.pdb' -printf '%f\n' | sed 's/\.pdb$//' | sort)
   echo "⚠ No gate list at $VALID — running MPNN on all ${#NAMES[@]} Phase-1 backbones."
 fi
 
