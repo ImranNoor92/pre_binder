@@ -14,16 +14,18 @@ The hexamer has exact three-fold rotational symmetry about an axis through `(0, 
 
 ## Pipeline
 
+The active pipeline is the standard de-novo binder flow **RFdiffusion → ProteinMPNN → AF2 (initial guess)**:
+
 | Phase | Script | What it does | Engine | Status |
 |------:|--------|--------------|--------|--------|
-| 1  | `scripts/01_pilot_rfdiffusion.sh` | Design ~10 single-subunit binder backbones against chain A (B–F as fixed steric context, hotspots `A105,107,109,111,114,115`) | RFdiffusion (`.venv-rfd-gpu`) | ✅ **runnable** |
-| 2a | `scripts/02_trimerize_replicate.py` | Replicate each subunit by C3 (0°/120°/240°) about the hexamer axis; fuse with `(GGGGS)`-type linkers | pure Python | ✅ **runnable** |
-| 2b | `scripts/03_af2_validation.sh` | Backbone gate: 1 quick MPNN seq → AF2-multimer (hexamer+trimer) → 4 filters (binder pLDDT > 70, interface pTM > 0.65, per-subunit interface SASA > 200 Å², RMSD vs design < 3 Å) | ProteinMPNN + AlphaFold | ✅ **wired** |
-| 3  | `scripts/04_proteinmpnn.sh` | Sequence design of the subunit (8 seqs); one subunit designed and reused in all 3 copies = tied positions for a replication-built homotrimer; target chains fixed | ProteinMPNN (`.venv-rfd-gpu`) | ✅ **wired** |
-| 4  | `scripts/05_af2_revalidation.sh` | AF2 each MPNN sequence; re-apply 4 filters; rank survivors by combined score | AlphaFold (`.venv-af2`) | ✅ **wired** |
-| Acid test | (in `05`) | Re-predict each survivor against one dimer pair (A+E only); require interface pTM to drop ≥ 0.15 — the operational test of hexamer-specificity | AlphaFold | ✅ **wired** |
+| 1  | `scripts/01_pilot_rfdiffusion.sh` | Design single-subunit binder backbones against chain A (B–F as fixed steric context, hotspots `A105,107,109,111,114,115`) | RFdiffusion (`.venv-rfd-gpu`) | ✅ run (10 backbones) |
+| 2a | `scripts/02_trimerize_replicate.py` | Replicate each subunit by C3 (0/120/240°) about the hexamer axis; fuse with `(GGGGS)` linkers | pure Python | ✅ run (10 trimers) |
+| 3  | `scripts/04_proteinmpnn.sh` | Sequence-design the subunit (8 seqs); one subunit designed and reused in all 3 copies (= tied positions for a replication-built homotrimer); target fixed | ProteinMPNN (`.venv-rfd-gpu`) | ✅ **active** |
+| IG | `scripts/06_ig_validate.sh` | Thread each MPNN seq onto the backbone, pair with one target chain, validate with **af2_initial_guess** (single-seq, templated, no MSA); filter `pae_interaction<10` & `plddt_binder>80`; rank | af2_initial_guess (`af2ig` env) | ✅ **active** |
 
-**Status:** all phases wired and runnable. Shared helpers live in [`scripts/lib/`](scripts/lib/); see "Where … are called from" below. Phases 1 and 2a have been run (10 backbones, 10 trimers); the AF2 phases are compute-heavy (see the efficiency note).
+Run end-to-end with `scripts/run_all.sh` (Phase 3 → IG). Helpers live in [`scripts/lib/`](scripts/lib/).
+
+> **Retired:** `scripts/03_af2_validation.sh` / `05_af2_revalidation.sh` (full-MSA AF2-multimer gate + dimer-pTM acid test). Kept in-tree for reference but **not used** — see the Environment section for why (OOM + slow + non-reproducing). Hexamer-specificity now rests on the C3 construction, with an optional multi-chain finalist re-check available later.
 
 ---
 
@@ -31,12 +33,15 @@ The hexamer has exact three-fold rotational symmetry about an axis through `(0, 
 
 This repo does **not** ship its own environment — it reuses the existing RFdiffusion install on this machine. Three venvs under `/data/rfdiffusion/`:
 
-| venv | Provides | Used by |
+| env | Provides | Used by |
 |------|----------|---------|
 | `/data/rfdiffusion/.venv-rfd-gpu` | RFdiffusion + ProteinMPNN (torch 1.12+cu116, e3nn, dgl, se3) | Phases 1, 3 |
-| `/data/rfdiffusion/.venv-af2`     | AlphaFold (jax 0.4.26); AF2 code at `/data/alphafold_code`, DB at `/data/alphafold_db` | Phases 2b, 4 |
+| `af2ig` conda env (`~/mambaforge/envs/af2ig`) | af2_initial_guess validator: jax 0.4.28+cuda, pyrosetta, tensorflow-cpu, bundled AlphaFold | Phase IG |
+| `/data/rfdiffusion/.venv-af2` | (legacy) full-MSA AlphaFold-multimer — retired as the validator, see below | — |
 
-Model weights live at `/data/rfdiffusion/models/` (the pip-installed `rfdiffusion` package's built-in relative lookup is empty, so Phase 1 passes the checkpoint explicitly via `inference.ckpt_override_path`).
+Model weights: RFdiffusion at `/data/rfdiffusion/models/` (Phase 1 passes `inference.ckpt_override_path`); AF2 `model_1_ptm` at `/data/alphafold_db/params/`. The `af2ig` env is built reproducibly by **`scripts/setup_af2ig.sh`** (clones the BindCraft conda env, repairs jax, adds tensorflow-cpu, patches the vendored AlphaFold, links weights). `external/` (the vendored `dl_binder_design` + that env) is git-ignored.
+
+> **Why af2_initial_guess, not full-MSA AF2 (learned the hard way):** vanilla AlphaFold-multimer with full MSA was (1) **OOM-killed** by `systemd-oomd` (full-BFD `hhblits` on the de-novo binder, only 2 GB swap), (2) ~1 h/design, and (3) didn't reproduce de-novo designs (RMSD ~23 Å). `af2_initial_guess` is single-sequence + templated on the design: **no MSA → no OOM**, ~2–3 s/design, and it validates the actual designed interface. It requires binder+target as exactly **2 chains** (binder = chain A), so we validate **each subunit against one target chain**; hexamer-specificity rests on the C3 construction (an optional multi-chain re-check can be run on finalists later). Full RUNLOG: `RUNLOG.md` 2026-06-08/09.
 
 Verify everything before running:
 
@@ -55,22 +60,12 @@ Nothing is vendored into this repo — every engine is invoked from the shared
 | Engine | Env (interpreter) | Code / entry point | Weights / DB | Invoked by |
 |--------|-------------------|--------------------|--------------|------------|
 | **RFdiffusion** | `/data/rfdiffusion/.venv-rfd-gpu/bin/python` | `/data/rfdiffusion/scripts/run_inference.py` | `/data/rfdiffusion/models/Complex_base_ckpt.pt` (passed via `inference.ckpt_override_path`) | `scripts/01_pilot_rfdiffusion.sh` |
-| **ProteinMPNN** | `/data/rfdiffusion/.venv-rfd-gpu/bin/python` | `/data/rfdiffusion/external/ProteinMPNN/protein_mpnn_run.py` (+ `helper_scripts/`) | bundled `vanilla_model_weights/` | `scripts/lib/mpnn_subunit.sh` (used by Phases 2b & 3) |
-| **AlphaFold-multimer** | `/data/rfdiffusion/.venv-af2/bin/python` | `/data/alphafold_code/alphafold/run_alphafold.py` via `…/trials/trial_1/run_alphafold_wrapper.py` (injects it on `PYTHONPATH`) | `/data/alphafold_db` (`model_preset=multimer`, `full_dbs`) | `scripts/lib/run_af2.sh` (used by Phases 2b & 4) |
+| **ProteinMPNN** | `/data/rfdiffusion/.venv-rfd-gpu/bin/python` | `/data/rfdiffusion/external/ProteinMPNN/protein_mpnn_run.py` (+ `helper_scripts/`) | bundled `vanilla_model_weights/` | `scripts/lib/mpnn_subunit.sh` (Phase 3) |
+| **af2_initial_guess** | `~/mambaforge/envs/af2ig/bin/python` | `external/dl_binder_design/af2_initial_guess/predict.py` (bundled AlphaFold, single-seq + initial guess, no MSA) | `model_1_ptm` (→ `/data/alphafold_db/params`) | `scripts/06_ig_validate.sh` (Phase IG) |
+| **AlphaFold-multimer** *(legacy)* | `/data/rfdiffusion/.venv-af2/bin/python` | `/data/alphafold_code/alphafold/run_alphafold.py` via the `trial_1` wrapper | `/data/alphafold_db` (`full_dbs`) | `scripts/lib/run_af2.sh` — retired as validator (kept for an optional multi-chain finalist check) |
 
-Why two Python envs: `.venv-rfd-gpu` carries torch/e3nn/dgl (RFdiffusion + ProteinMPNN);
-`.venv-af2` carries jax/haiku/openmm (AlphaFold). They are mutually exclusive, so each phase
-shells out to the helper that runs under the correct interpreter — orchestration
-([`scripts/lib/af2_phase.py`](scripts/lib/af2_phase.py)) runs under `.venv-af2` and calls the
-MPNN helper as a subprocess.
-
-> **Target-MSA reuse (implemented):** the six target chains are identical, so their (expensive,
-> `full_dbs`) MSA is computed once on the first design, cached at `outputs/_msa_cache/target_A/`,
-> and reused for every later design (`af2_phase.py:seed_target_msa`/`save_target_msa`). Only the
-> de-novo binder chain's MSA is recomputed per design. If the cache is stale, AF2 just recomputes
-> (`--use_precomputed_msas`) — it never fails. `reduced_dbs` is *not* available here (`small_bfd`
-> is not downloaded). The remaining per-design cost is the binder MSA; installing
-> `af2_initial_guess` (single-sequence + templating) would remove that too.
+Each tool runs under its own interpreter (mutually exclusive deps), so the phase scripts shell
+out to the helper that runs under the correct env.
 
 ---
 
@@ -119,12 +114,14 @@ cd /data/binder_software/pre-binder
 bash   scripts/00_check_env.sh                                 # ~30 s — must be all ✓
 bash   scripts/01_pilot_rfdiffusion.sh  2>&1 | tee logs/01.log # ~2–4 h on 1 GPU → 10 backbones
 python scripts/02_trimerize_replicate.py                       # ~1 min  → trimerized PDBs
-GPU=0  bash scripts/03_af2_validation.sh   2>&1 | tee logs/03.log # Phase 2b gate (MPNN+AF2 filter)
-GPU=0  bash scripts/04_proteinmpnn.sh      2>&1 | tee logs/04.log # Phase 3   (8 seqs/survivor)
-GPU=0  bash scripts/05_af2_revalidation.sh 2>&1 | tee logs/05.log # Phase 4   (AF2 + acid test + rank)
+bash   scripts/setup_af2ig.sh                                  # once — builds the af2ig validator env
+# validation half (run durably via systemd-run — see "Running long jobs"):
+GPU=0  bash scripts/04_proteinmpnn.sh      2>&1 | tee logs/04.log # Phase 3   (8 seqs/backbone)
+GPU=0  bash scripts/06_ig_validate.sh      2>&1 | tee logs/06.log # Phase IG  (thread + initial-guess + rank)
+# or both at once:  GPU=0 bash scripts/run_all.sh
 ```
 
-Overrides: Phase 1 takes `GPU` (default 1), `NUM_DESIGNS`, `BINDER_MIN`/`BINDER_MAX` (default 60–90); the AF2/MPNN phases take `GPU` (default 0) and `NUM_SEQ_PER_BACKBONE`/`NUM_SEQ` (default 8). Every script is idempotent — it skips work whose output already exists, so a re-run resumes.
+Overrides: Phase 1 takes `GPU` (default 1), `NUM_DESIGNS`, `BINDER_MIN`/`BINDER_MAX` (default 60–90); Phase 3/IG take `GPU` (default 0), `NUM_SEQ_PER_BACKBONE`/`NUM_SEQ` (default 8), and `IG_PAE_MAX`/`IG_PLDDT_MIN` (default 10 / 80). Every script is idempotent — it skips work whose output already exists, so a re-run resumes.
 
 ---
 

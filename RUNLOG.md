@@ -36,11 +36,22 @@ Status ∈ {OK, FAILED, RUNNING}. The `run_all.sh` launcher auto-appends timesta
 - inputs: 10 trimerized backbones
 - params: GPU 0; AF2 multimer `full_dbs`; MPNN temp 0.1 seed 37, `NUM_SEQ=8`; filters pLDDT>70, iPTM>0.65, per-subunit ΔSASA>200 Å², RMSD<3 Å; acid test iPTM drop ≥0.15 (hexamer→A+E dimer)
 - Δ from prev: launched via **`systemd-run --user --unit=prebinder`** (owned by the user systemd manager, cgroup `user@…/prebinder.service`) — survives both shell teardown and logout. Target-MSA reuse + chained gate→mpnn→final as before.
-- result: _(running)_ — check: `systemctl --user status prebinder`
-- artifacts: `logs/run_all_*.log`, `outputs/02b_*`, `outputs/03_mpnn_sequences/`, `outputs/04_final_ranked/`, `outputs/04_final_metrics.csv`
+- result: **FAILED** — `systemd-oomd` OOM-killed it 2026-06-09 02:21 (266 procs, status 9/KILL) after designs 0–1, on design_2's MSA. Cause: full-BFD `hhblits` on the de-novo binder spikes memory pressure (box has only 2 GB swap). Also design_0 had failed all filters (pLDDT 34, RMSD 23 Å) — vanilla full-MSA AF2 doesn't reproduce de-novo designs.
+
+### 2026-06-09 10:19 · Phase 3 → IG — validation via **af2_initial_guess** · **RUNNING**
+- inputs: 10 RFdiffusion backbones (subunit vs one target chain)
+- params: GPU 0; ProteinMPNN temp 0.1 seed 37, `NUM_SEQ=8`; validator = dl_binder_design `af2_initial_guess` (single-seq, templated, **no MSA**), model_1_ptm, 3 recycles; pass = `pae_interaction<10` AND `plddt_binder>80`
+- Δ from prev: **retired vanilla full-MSA AF2** (OOM + slow + non-reproducing). New env `af2ig` (see `scripts/setup_af2ig.sh`). Order is now standard RFdiffusion→MPNN→AF2. ~2–3 s/design, no MSA so **no OOM**. Per-subunit interface validation; hexamer-specificity rests on the C3 construction (optional multichain re-check later).
+- result: _(running)_ — check `bash scripts/status.sh`; results in `outputs/06_ig/ranked.csv`
+- artifacts: `outputs/03_mpnn_sequences/`, `outputs/06_ig/{inputs,out}/`, `outputs/06_ig/ranked.csv`
 
 ---
 
 ## Event log (auto-appended by run_all.sh)
 2026-06-08 12:02:03 EDT | RUN START  run_all (gate→mpnn→final)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3640884
 2026-06-08 12:36:58 EDT | RUN START  run_all (gate→mpnn→final)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3650791
+2026-06-08 13:46:08 EDT | phase2b gate  exit=1
+2026-06-08 13:46:08 EDT | RUN ABORTED at gate
+2026-06-08 18:46:45 EDT | RUN START  run_all (gate→mpnn→final)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3744628
+2026-06-09 10:17:22 EDT | RUN START  run_all (mpnn→initial-guess)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3977158
+2026-06-09 10:19:09 EDT | RUN START  run_all (mpnn→initial-guess)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=3977741
