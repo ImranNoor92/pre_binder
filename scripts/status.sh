@@ -33,19 +33,20 @@ else
   bold "VERDICT     : ❌ NOT RUNNING (dead/finished) — see 'systemctl --user status $UNIT'"
 fi
 
-# progress
-gate=$(ls outputs/02b_af2/*/ranking_debug.json 2>/dev/null | wc -l)
-fin=$(ls outputs/04_af2/*_hex/ranking_debug.json 2>/dev/null | wc -l)
-cache=$([ -d outputs/_msa_cache/target_A ] && echo "cached" || echo "building")
-echo  "phase 2b    : $gate/10 backbones predicted   | target MSA: $cache"
-echo  "phase 4     : $fin hex predictions done"
-[ -f outputs/02b_af2_validated/validated.txt ] && echo "validated   : $(wc -l < outputs/02b_af2_validated/validated.txt) backbone(s)"
-[ -d outputs/04_final_ranked ] && echo "final ranked: $(ls outputs/04_final_ranked/*.pdb 2>/dev/null | wc -l) design(s)"
+# progress (current pipeline: RFdiffusion -> ProteinMPNN -> af2_initial_guess)
+bb=$(find outputs/01_rfdiffusion_pilot -maxdepth 1 -name 'design_*.pdb' 2>/dev/null | wc -l)
+mpnn=$(ls outputs/03_mpnn_sequences/seqs/*.fa 2>/dev/null | wc -l)
+igin=$(ls outputs/06_ig/inputs/*.pdb 2>/dev/null | wc -l)
+igout=$(ls outputs/06_ig/out/*_af2pred.pdb 2>/dev/null | wc -l)
+echo  "Phase 1 RFd : $bb backbones generated"
+echo  "Phase 3 MPNN: $mpnn backbones sequenced"
+echo  "Phase IG    : $igout/$igin initial-guess predictions"
+if [ -f outputs/06_ig/ranked.csv ]; then
+  np=$(awk -F, 'NR>1 && $NF=="True"{n++} END{print n+0}' outputs/06_ig/ranked.csv)
+  echo "RESULT      : $np pass  →  outputs/06_ig/ranked.csv"
+fi
 
-# what AF2 is doing right now + log freshness
-cur=$(ls -d outputs/02b_af2/design_*_hex outputs/04_af2/*_hex 2>/dev/null | tail -1)
-[ -n "${cur:-}" ] && echo "current     : $(basename "$cur")  msas: $(ls "$cur"/msas/*/ 2>/dev/null | grep -c hits)"
-LOG=$(ls -t logs/run_all_*.log 2>/dev/null | head -1)
+LOG=$(ls -t logs/run_full_*.log logs/run_all_*.log 2>/dev/null | head -1)
 if [ -n "${LOG:-}" ]; then
   age=$(( $(date +%s) - $(stat -c %Y "$LOG") ))
   echo "log         : $LOG  (last write ${age}s ago)"
