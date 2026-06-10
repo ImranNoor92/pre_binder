@@ -18,8 +18,12 @@ RFD_CKPT="${RFD_CKPT:-/data/rfdiffusion/models/Complex_base_ckpt.pt}"
 
 GPU="${GPU:-1}"            # override with GPU=0 ./01_pilot_rfdiffusion.sh
 NUM_DESIGNS="${NUM_DESIGNS:-10}"
+DESIGN_STARTNUM="${DESIGN_STARTNUM:-0}"   # offset design index (for splitting a run across GPUs)
 BINDER_MIN="${BINDER_MIN:-60}"
 BINDER_MAX="${BINDER_MAX:-90}"
+# Hotspots = which target residues steer the binder (README: 3-6; site needs >=3 hydrophobics).
+# Default is the hydrophobic-rich, exposed cluster V107/I116/A117/L120 (replaces the polar 105-115).
+HOTSPOTS="${HOTSPOTS:-[A107,A116,A117,A120]}"
 
 mkdir -p "$OUTDIR" "$LOGDIR"
 
@@ -41,8 +45,9 @@ CUDA_VISIBLE_DEVICES=$GPU \
   inference.output_prefix="$OUTDIR/design" \
   inference.input_pdb="$TARGET" \
   inference.num_designs="$NUM_DESIGNS" \
+  inference.design_startnum="$DESIGN_STARTNUM" \
   "contigmap.contigs=[A70-150/0 B70-150/0 C70-150/0 D70-150/0 E70-150/0 F70-150/0 ${BINDER_MIN}-${BINDER_MAX}]" \
-  "ppi.hotspot_res=[A105,A107,A109,A111,A114,A115]" \
+  "ppi.hotspot_res=$HOTSPOTS" \
   denoiser.noise_scale_ca=0 \
   denoiser.noise_scale_frame=0 \
   2>&1 | tee "$LOG"
