@@ -16,11 +16,13 @@ PAE_MAX, PLDDT_MIN, RMSD_OK = 10.0, 80.0, 2.0
 
 def load(path):
     pae, plddt, rmsd, passed = [], [], [], []
+    tags = []
     with open(path) as fh:
         for r in csv.DictReader(fh):
             pae.append(float(r["pae_interaction"])); plddt.append(float(r["plddt_binder"]))
             rmsd.append(float(r["binder_rmsd"])); passed.append(r["pass"].strip() == "True")
-    return (np.array(pae), np.array(plddt), np.array(rmsd), np.array(passed))
+            tags.append(r.get("tag", ""))
+    return (np.array(pae), np.array(plddt), np.array(rmsd), np.array(passed), tags)
 
 
 def main():
@@ -31,7 +33,7 @@ def main():
     ap.add_argument("--subtitle", default="")
     a = ap.parse_args()
 
-    pae, plddt, rmsd, passed = load(a.csv)
+    pae, plddt, rmsd, passed, tags = load(a.csv)
     n, npass = len(pae), int(passed.sum())
 
     plt.rcParams.update({"font.size": 9, "axes.titlesize": 10, "figure.dpi": 150})
@@ -54,7 +56,9 @@ def main():
              fontsize=8, va="top", fontweight="bold")
     axA.set_xlim(x0, x1); axA.set_ylim(y0, y1)
     axA.set_xlabel("plddt_binder  (does it FOLD →)"); axA.set_ylabel("pae_interaction  (↓ does it BIND)")
-    axA.set_title("A · Binding landscape — folds well, but no interface")
+    landscape = (f"folds AND binds — {npass} in pass box" if npass
+                 else "folds well, but no interface")
+    axA.set_title(f"A · Binding landscape — {landscape}")
     cb = fig.colorbar(scA, ax=axA, pad=0.02); cb.set_label("binder_rmsd vs design (Å)")
 
     # --- Panel B: pae_interaction distribution ---
@@ -63,7 +67,7 @@ def main():
     axB.axvline(PAE_MAX, color="crimson", ls="--", lw=1.6, label=f"pass threshold < {PAE_MAX:.0f}")
     axB.axvline(pae.min(), color="black", ls=":", lw=1.2, label=f"best = {pae.min():.1f}")
     axB.set_xlabel("pae_interaction (lower = stronger interface)"); axB.set_ylabel("designs")
-    axB.set_title("B · Interface confidence — all far from threshold"); axB.legend(fontsize=8)
+    axB.set_title(f"B · Interface confidence — {int((pae<PAE_MAX).sum())}/{n} below threshold"); axB.legend(fontsize=8)
 
     # --- Panel C: plddt_binder distribution ---
     axC = ax[1, 0]
@@ -79,11 +83,17 @@ def main():
     axD.set_xlabel("binder_rmsd vs design (Å, clipped at 10)"); axD.set_ylabel("designs")
     axD.set_title(f"D · Design recapitulation — {int((rmsd<RMSD_OK).sum())}/{n} within {RMSD_OK:.0f} Å"); axD.legend(fontsize=8)
 
-    fig.text(0.5, 0.005,
-             "Takeaway: af2_initial_guess validation ran clean (no MSA, no OOM). Designs FOLD into their "
-             "intended shape (panels C/D) but do NOT form a confident interface with the target "
-             "(panels A/B) — bottleneck is the designs/epitope, not the pipeline.",
-             ha="center", fontsize=8.5, color="#333", wrap=True)
+    if npass:
+        pidx = np.where(passed)[0]
+        bi = int(pidx[np.argmin(pae[pidx])])
+        takeaway = (f"Takeaway: {npass}/{n} designs PASS (fold AND bind). Best: {tags[bi]} "
+                    f"(pae_interaction {pae[bi]:.2f}, plddt_binder {plddt[bi]:.1f}, "
+                    f"rmsd {rmsd[bi]:.2f} Å). The hydrophobic-centred hotspot site works — "
+                    f"candidate per-subunit binders to carry to the C3-trimer step.")
+    else:
+        takeaway = ("Takeaway: ran clean (no MSA, no OOM). Designs FOLD (panels C/D) but do NOT form a "
+                    "confident interface (panels A/B) — bottleneck is the designs/epitope, not the pipeline.")
+    fig.text(0.5, 0.005, takeaway, ha="center", fontsize=8.5, color="#333", wrap=True)
     fig.tight_layout(rect=[0, 0.02, 1, 0.93])
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(a.out, bbox_inches="tight")

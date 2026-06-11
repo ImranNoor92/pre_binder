@@ -44,7 +44,8 @@ def main():
     out.sort(key=lambda x: (not x["pass"], x["pae_interaction"]))  # passers first, then best pae
     with open(a.out_csv, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["rank", "design", "seq_idx", "tag",
-                                           "pae_interaction", "plddt_binder", "binder_rmsd", "pass"])
+                                           "pae_interaction", "plddt_binder", "binder_rmsd", "pass"],
+                           lineterminator="\n")  # unix endings so awk/grep counts don't choke on \r
         w.writeheader()
         for i, r in enumerate(out, 1):
             w.writerow({"rank": i, **r})

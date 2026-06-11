@@ -46,6 +46,14 @@ Status ∈ {OK, FAILED, RUNNING}. The `run_all.sh` launcher auto-appends timesta
 - next: extend the target hotspot patch; scale backbone count. The C3-trimer hexamer-specificity test is still unbuilt (per-subunit validation only).
 - artifacts: `outputs/06_ig/ranked.csv`, `outputs/06_ig/out/*_af2pred.pdb`, summary figure `outputs/06_ig/run_summary.png`
 
+### 2026-06-10 09:31 · Phase 1→IG — 200 backbones, hydrophobic hotspots · **OK — 18/1600 pass** 🎯
+- inputs: 200 RFdiffusion backbones (2-GPU split, 100/GPU), **hotspots `[A107,A116,A117,A120]`** (hydrophobic V/I/A/L, replaces polar 105–115)
+- params: ProteinMPNN 8 seq/backbone (1600 designs); af2_initial_guess pass = pae_interaction<10 AND plddt_binder>80
+- Δ from prev: **new hydrophobic-centred site** (paper: site needs ≥3 hydrophobics; old 105–115 had 1) + **20× scale** (10→200 backbones). Runtime ~7 h, durable (`systemd-run`), no OOM.
+- result: **18/1600 PASS across 8 backbones** (design_16, 123, 69, 188, 47, 63, 172, 193). Best `design_16_s0`: pae_interaction **6.79**, plddt_binder 85.8, rmsd 0.6 Å. vs old polar 105–115 run = **0/80, best pae 25.6** → the hotspot change worked. (40/1600 reach pae<10; 18 also clear plddt>80.)
+- artifacts: `outputs/06_ig/ranked.csv`, `reports/2026-06-10_phaseIG_200_hydrophobic.png`; old run archived at `outputs/_archive_2026-06-09_hs105-115/`
+- note: RESULT line in the auto event-log said "0 pass" — a `\r\n` CSV counting bug (now fixed, `lineterminator="\n"`); true count is 18. Still per-subunit validation; C3-trimer specificity test next.
+
 ---
 
 ## Event log (auto-appended by run_all.sh)
@@ -59,3 +67,10 @@ Status ∈ {OK, FAILED, RUNNING}. The `run_all.sh` launcher auto-appends timesta
 2026-06-09 10:25:10 EDT | phase3 mpnn        exit=0
 2026-06-09 10:39:48 EDT | phaseIG initial-guess exit=0
 2026-06-09 10:39:48 EDT | RUN COMPLETE  0 design(s) pass  →  outputs/06_ig/ranked.csv
+2026-06-10 09:31:24 EDT | RUN START run_full  RFd=200 (2-GPU split)  hotspots=[A107,A116,A117,A120]  host=caspbioa01.as.acorn.miami.edu  pid=121526
+2026-06-10 13:57:04 EDT | phase1 rfdiffusion exit=0/0  backbones=200
+2026-06-10 13:57:04 EDT | RUN START  run_all (mpnn→initial-guess)  GPU=0  NUM_SEQ=8  host=caspbioa01.as.acorn.miami.edu  pid=717545
+2026-06-10 14:19:36 EDT | phase3 mpnn        exit=0
+2026-06-10 16:44:13 EDT | phaseIG initial-guess exit=0
+2026-06-10 16:44:13 EDT | RUN COMPLETE  0 design(s) pass  →  outputs/06_ig/ranked.csv
+2026-06-10 16:44:13 EDT | RUN FULL DONE
