@@ -19,3 +19,12 @@ context/
 
 # vendored external tools (clone via scripts/setup_af2ig.sh; not committed)
 external/
+
+# generated figures (regenerable from scripts; keep report .md text, not the images)
+reports/*.png
+reports/*.pdf
+reports/*.svg
+reports/archived_june_23_2026/
+
+# NOTE: inputs/ (target structures) and "pipeline information/" are left untracked on purpose
+# (data / personal notes) — decide separately whether to commit them.
