@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2280 1260" role="img" aria-labelledby="title desc">
+  <title id="title">Validation gates and specificity test</title>
+  <desc id="desc">A publication-style schematic showing the four AF2 structural filters, the dimer-only specificity acid test, and the final ranking criterion.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f8b96"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 700 44px Arial, Helvetica, sans-serif; fill: #14171a; }
+      .subtitle { font: 400 22px Arial, Helvetica, sans-serif; fill: #4a5661; }
+      .card { fill: #ffffff; stroke-width: 2.2; }
+      .card-blue { fill: #f7fbff; stroke: #7aa3cc; }
+      .card-teal { fill: #f5fbf9; stroke: #69a89e; }
+      .card-sand { fill: #fffaf1; stroke: #c8a86d; }
+      .card-rose { fill: #fff8f7; stroke: #c98d85; }
+      .threshold { font: 700 58px Arial, Helvetica, sans-serif; fill: #16202a; }
+      .metric { font: 700 28px Arial, Helvetica, sans-serif; fill: #16202a; }
+      .body { font: 400 19px Arial, Helvetica, sans-serif; fill: #394652; }
+      .small { font: 600 17px Arial, Helvetica, sans-serif; fill: #56616d; }
+      .pill { fill: #e9eef4; stroke: #cfd6de; stroke-width: 1.4; }
+      .accent { stroke: #7f8b96; stroke-width: 3; fill: none; }
+      .divider { stroke: #d7dde5; stroke-width: 2; }
+      .rank { font: 700 24px Arial, Helvetica, sans-serif; fill: #16202a; }
+      .rank-box { fill: #fbfcfd; stroke: #cfd6de; stroke-width: 2; }
+      .acid { font: 700 30px Arial, Helvetica, sans-serif; fill: #16202a; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="2280" height="1260"/>
+  <text class="title" x="70" y="72">Validation gates and specificity test</text>
+  <text class="subtitle" x="70" y="114">The same AF2 logic is used twice: first to reject unstable or poorly posed scaffolds, then to confirm that the design depends on the full hexameric target.</text>
+  <g transform="translate(70 180)">
+    <rect class="card card-blue" rx="24" ry="24" x="0" y="0" width="1020" height="280"/>
+    <circle class="pill" cx="116" cy="98" r="74"/>
+    <text class="threshold" x="116" y="116" text-anchor="middle">&gt;0.70</text>
+    <text class="metric" x="230" y="72">Binder pLDDT</text>
+    <text class="body" x="230" y="120">
+      <tspan x="230" dy="0">Average confidence of the binder fold.</tspan>
+      <tspan x="230" dy="30">Low values indicate an unreliable backbone.</tspan>
+    </text>
+    <line class="divider" x1="230" y1="176" x2="960" y2="176"/>
+    <text class="small" x="230" y="220">What it protects: the design should fold as intended before interface details matter.</text>
+  </g>
+  <g transform="translate(1190 180)">
+    <rect class="card card-teal" rx="24" ry="24" x="0" y="0" width="1020" height="280"/>
+    <circle class="pill" cx="116" cy="98" r="74"/>
+    <text class="threshold" x="116" y="116" text-anchor="middle">&gt;0.65</text>
+    <text class="metric" x="230" y="72">Interface pTM</text>
+    <text class="body" x="230" y="120">
+      <tspan x="230" dy="0">Confidence that the binder sits on the target</tspan>
+      <tspan x="230" dy="30">in the intended pose.</tspan>
+    </text>
+    <line class="divider" x1="230" y1="176" x2="960" y2="176"/>
+    <text class="small" x="230" y="220">What it protects: the interface should be well-placed, not merely a good fold.</text>
+  </g>
+  <g transform="translate(70 500)">
+    <rect class="card card-sand" rx="24" ry="24" x="0" y="0" width="1020" height="280"/>
+    <circle class="pill" cx="116" cy="98" r="74"/>
+    <text class="threshold" x="116" y="116" text-anchor="middle">&gt;200</text>
+    <text class="metric" x="230" y="72">Interface SASA</text>
+    <text class="body" x="230" y="120">
+      <tspan x="230" dy="0">Each binder copy must bury a real interface.</tspan>
+      <tspan x="230" dy="30">This rejects glancing or partial contacts.</tspan>
+    </text>
+    <line class="divider" x1="230" y1="176" x2="960" y2="176"/>
+    <text class="small" x="230" y="220">What it protects: all three subunits must contribute to binding, not just one.</text>
+  </g>
+  <g transform="translate(1190 500)">
+    <rect class="card card-rose" rx="24" ry="24" x="0" y="0" width="1020" height="280"/>
+    <circle class="pill" cx="116" cy="98" r="74"/>
+    <text class="threshold" x="116" y="116" text-anchor="middle">&lt;3.0 A</text>
+    <text class="metric" x="230" y="72">Design RMSD</text>
+    <text class="body" x="230" y="120">
+      <tspan x="230" dy="0">AF2 may relax the design slightly, but it should</tspan>
+      <tspan x="230" dy="30">not adopt a different backbone.</tspan>
+    </text>
+    <line class="divider" x1="230" y1="176" x2="960" y2="176"/>
+    <text class="small" x="230" y="220">What it protects: the prediction must stay close to the designed geometry.</text>
+  </g>
+  <g transform="translate(70 840)">
+    <rect class="card rank-box" rx="26" ry="26" x="0" y="0" width="2140" height="340"/>
+    <text class="acid" x="60" y="74">Specificity acid test</text>
+    <text class="body" x="60" y="122">Re-run AF2 on a reduced target interface, then require the interface confidence to drop by at least 0.15.</text>
+    <g transform="translate(60 165)">
+      <rect class="pill" x="0" y="0" width="260" height="84" rx="20" ry="20"/>
+      <text class="rank" x="130" y="34" text-anchor="middle">Full hexamer</text>
+      <text class="small" x="130" y="60" text-anchor="middle">AF2-multimer</text>
+    </g>
+    <line class="accent" x1="350" y1="207" x2="530" y2="207" marker-end="url(#arrow)"/>
+    <g transform="translate(550 165)">
+      <rect class="pill" x="0" y="0" width="260" height="84" rx="20" ry="20"/>
+      <text class="rank" x="130" y="34" text-anchor="middle">Reduced dimer</text>
+      <text class="small" x="130" y="60" text-anchor="middle">same binder sequence</text>
+    </g>
+    <g transform="translate(860 168)">
+      <rect class="pill" x="0" y="0" width="470" height="78" rx="20" ry="20"/>
+      <text class="rank" x="235" y="34" text-anchor="middle">Require  &gt;= 0.15 drop in interface pTM</text>
+      <text class="small" x="235" y="58" text-anchor="middle">Hexamer-specific hits weaken on the reduced target</text>
+    </g>
+    <g transform="translate(1370 162)">
+      <rect class="pill" x="0" y="0" width="690" height="90" rx="20" ry="20"/>
+      <text class="rank" x="345" y="36" text-anchor="middle">Final ranking</text>
+      <text class="body" x="345" y="64" text-anchor="middle">Combine confidence and geometry into a single score for the surviving designs.</text>
+    </g>
+  </g>
+</svg>

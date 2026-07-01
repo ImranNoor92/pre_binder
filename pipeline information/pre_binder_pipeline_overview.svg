@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="680" viewBox="0 0 2200 680" role="img" aria-labelledby="title desc">
+  <title id="title">Pre-binder design pipeline overview</title>
+  <desc id="desc">A publication-style schematic showing target context, RFdiffusion backbone sampling, C3 replication, AlphaFold validation, ProteinMPNN sequence design, and final revalidation with a specificity acid test.</desc>
+  <rect width="2200" height="680" fill="#FFFFFF"/>
+  <style>
+    .title { font-family: Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 700; fill: #172033; }
+    .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 400; fill: #5C6677; }
+    .panel { font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; fill: #172033; }
+    .phase { font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.6px; fill: #FFFFFF; }
+    .card-title { font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; fill: #172033; }
+    .body { font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 400; fill: #344054; }
+    .footer { font-family: Arial, Helvetica, sans-serif; font-size: 17px; font-weight: 600; fill: #223047; }
+    .small { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 400; fill: #5C6677; }
+  </style>
+  <text x="80" y="54" class="title">Pre-binder design pipeline</text>
+  <text x="80" y="86" class="subtitle">Symmetry-aware binder discovery and validation, drawn as a paper-ready schematic rather than a folder map.</text>
+  <text x="80" y="124" class="panel">A</text>
+  <g transform="translate(80,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#8A97A6"/>
+    <text x="22" y="38" class="phase">INPUT</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">Target context</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Present the full</tspan>
+      <tspan x="155" dy="22">hexamer and hotspot</tspan>
+      <tspan x="155" dy="22">residues to define</tspan>
+      <tspan x="155" dy="22">the binding site</tspan>
+      <tspan x="155" dy="22">and preserve steric</tspan>
+      <tspan x="155" dy="22">context.</tspan>
+    </text>
+  </g>
+  <line x1="392" y1="146" x2="418" y2="146" stroke="#9AA8B8" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="418,146 409,141 409,151" fill="#9AA8B8"/>
+  <g transform="translate(420,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#6C8FBF"/>
+    <text x="22" y="38" class="phase">PHASE 1</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">RFdiffusion</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Generate candidate</tspan>
+      <tspan x="155" dy="22">binder backbones</tspan>
+      <tspan x="155" dy="22">against one target chain</tspan>
+      <tspan x="155" dy="22">under hotspot bias.</tspan>
+    </text>
+  </g>
+  <line x1="732" y1="146" x2="758" y2="146" stroke="#9AA8B8" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="758,146 749,141 749,151" fill="#9AA8B8"/>
+  <g transform="translate(760,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#6EA69A"/>
+    <text x="22" y="38" class="phase">PHASE 2A</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">C3 replication</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Replicate the binder</tspan>
+      <tspan x="155" dy="22">subunit three times and</tspan>
+      <tspan x="155" dy="22">fuse the copies into</tspan>
+      <tspan x="155" dy="22">one trimeric scaffold.</tspan>
+    </text>
+  </g>
+  <line x1="1072" y1="146" x2="1098" y2="146" stroke="#9AA8B8" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="1098,146 1089,141 1089,151" fill="#9AA8B8"/>
+  <g transform="translate(1100,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#7F8FC6"/>
+    <text x="22" y="38" class="phase">PHASE 2B</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">AF2 validation</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Predict the fused trimer</tspan>
+      <tspan x="155" dy="22">with the hexamer target</tspan>
+      <tspan x="155" dy="22">and keep only geometries</tspan>
+      <tspan x="155" dy="22">that preserve fold and</tspan>
+      <tspan x="155" dy="22">interface geometry.</tspan>
+    </text>
+  </g>
+  <line x1="1412" y1="146" x2="1438" y2="146" stroke="#9AA8B8" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="1438,146 1429,141 1429,151" fill="#9AA8B8"/>
+  <g transform="translate(1440,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#B69463"/>
+    <text x="22" y="38" class="phase">PHASE 3</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">ProteinMPNN</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Redesign the binder</tspan>
+      <tspan x="155" dy="22">sequence while fixing</tspan>
+      <tspan x="155" dy="22">the target chains; tie</tspan>
+      <tspan x="155" dy="22">the three copies so the</tspan>
+      <tspan x="155" dy="22">trimer stays symmetric.</tspan>
+    </text>
+  </g>
+  <line x1="1752" y1="146" x2="1778" y2="146" stroke="#9AA8B8" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="1778,146 1769,141 1769,151" fill="#9AA8B8"/>
+  <g transform="translate(1780,160)">
+    <rect width="310" height="330" rx="24" fill="#FBFCFE" stroke="#D6DCE6" stroke-width="2"/>
+    <rect x="0" y="0" width="310" height="14" rx="24" fill="#586774"/>
+    <text x="22" y="38" class="phase">PHASE 4</text>
+    <text x="155" y="76" class="card-title" text-anchor="middle">Final AF2</text>
+    <text x="155" y="118" class="body" text-anchor="middle">
+      <tspan x="155" dy="0">Re-predict each redesign,</tspan>
+      <tspan x="155" dy="22">then repeat on a reduced</tspan>
+      <tspan x="155" dy="22">dimer target. Keep only</tspan>
+      <tspan x="155" dy="22">designs that stay stable</tspan>
+      <tspan x="155" dy="22">and lose interface</tspan>
+      <tspan x="155" dy="22">confidence when the hexamer</tspan>
+      <tspan x="155" dy="22">context is removed.</tspan>
+    </text>
+  </g>
+  <g transform="translate(80,520)">
+    <rect width="1930" height="86" rx="18" fill="#F6F8FB" stroke="#D9DFE8" stroke-width="2"/>
+    <text x="965" y="36" class="footer" text-anchor="middle">Output: ranked pre-binders for experimental follow-up</text>
+    <text x="965" y="60" class="small" text-anchor="middle">Survivors from both AF2 rounds carry forward; ranking can combine interface pTM, binder pLDDT, and inverse RMSD.</text>
+  </g>
+</svg>
