@@ -5,13 +5,14 @@
 # Patch chemistry: Leu40 + Met155 (hydrophobic anchors), Tyr41 (aromatic), Lys42 (salt-bridge
 # handle), Asn38/Gln (polar) -> a mixed, designable interface (unlike the failed central Asp site).
 #
-# Output: outputs/20_dimer_arm/design_{N}.pdb (+ .trb)
+# Output: outputs/C3_symmetric_Binder_2026_07_02/01_rfd/design_{N}.pdb (+ .trb)
 # Usage : [GPU=0] [NUM_DESIGNS=20] [BINDER_MIN=90] [BINDER_MAX=150] [DESIGN_STARTNUM=0] bash scripts/20_rfd_dimer_arm.sh
 set -euo pipefail
 PROJECT=/data/binder_software/pre-binder
 TARGET="$PROJECT/inputs/151lp3t3_dimerAF.pdb"          # A+F dimer (the 28 A hotspot-patch pair)
-OUTDIR="$PROJECT/outputs/20_dimer_arm"
-LOGDIR="$PROJECT/logs"
+CAMPAIGN="$PROJECT/outputs/C3_symmetric_Binder_2026_07_02"  # one campaign = one folder
+OUTDIR="$CAMPAIGN/01_rfd"                               # Step 1 designs live here
+LOGDIR="$CAMPAIGN/logs"
 RFD_PY=/data/rfdiffusion/.venv-rfd-gpu/bin/python
 RFD_SCRIPT=/data/rfdiffusion/scripts/run_inference.py
 RFD_CKPT="${RFD_CKPT:-/data/rfdiffusion/models/Complex_base_ckpt.pt}"
@@ -30,6 +31,7 @@ CUDA_VISIBLE_DEVICES=$GPU \
 "$RFD_PY" "$RFD_SCRIPT" \
   inference.ckpt_override_path="$RFD_CKPT" \
   inference.output_prefix="$OUTDIR/design" \
+  hydra.run.dir="$CAMPAIGN/_hydra/\${now:%Y-%m-%d_%H-%M-%S}" \
   inference.input_pdb="$TARGET" \
   inference.num_designs="$NUM_DESIGNS" \
   inference.design_startnum="$DESIGN_STARTNUM" \
