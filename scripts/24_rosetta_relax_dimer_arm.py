@@ -18,17 +18,18 @@ import csv, glob, json, os, sys
 
 ROOT = "/data/binder_software/pre-binder"
 CAMP = f"{ROOT}/outputs/C3_symmetric_Binder_2026_07_02"
-PACK_CSV = f"{CAMP}/04_rosetta/interface_metrics.csv"
-INDIR = f"{CAMP}/04_rosetta/in"
-RELAXDIR = f"{CAMP}/04_rosetta/relaxed"
-OUT = f"{CAMP}/04_rosetta/relaxed_metrics.csv"
+RDIR = os.environ.get("ROSETTA_DIR", f"{CAMP}/04_rosetta")                  # round 2: 08_rosetta
+PACK_CSV = os.environ.get("PACK_CSV", f"{RDIR}/interface_metrics.csv")
+INDIR = f"{RDIR}/in"
+RELAXDIR = f"{RDIR}/relaxed"
+OUT = f"{RDIR}/relaxed_metrics.csv"
 os.makedirs(RELAXDIR, exist_ok=True)
 
 TOPN    = int(os.environ.get("RELAX_TOPN", "20"))
 REPEATS = int(os.environ.get("REPEATS", "1"))
 SHARD   = int(os.environ.get("SHARD", "0"))
 NSHARD  = int(os.environ.get("NSHARD", "1"))
-JSONL   = f"{CAMP}/04_rosetta/relaxed_s{SHARD}.jsonl"
+JSONL   = f"{RDIR}/relaxed_s{SHARD}.jsonl"
 
 MERGE = len(sys.argv) > 1 and sys.argv[1] == "merge"
 if not MERGE:
@@ -137,7 +138,7 @@ def relax_and_score(pdb, relaxed_out):
 def merge():
     pack = {r["tag"]: r for r in csv.DictReader(open(PACK_CSV))}
     out, seen = [], set()
-    for jf in sorted(glob.glob(f"{CAMP}/04_rosetta/relaxed_s*.jsonl")):
+    for jf in sorted(glob.glob(f"{RDIR}/relaxed_s*.jsonl")):
         for l in open(jf):
             r = json.loads(l)
             if "dG_relaxed" in r and r["tag"] not in seen:

@@ -24,10 +24,10 @@ import csv, glob, json, os, sys
 
 ROOT = "/data/binder_software/pre-binder"
 CAMP = f"{ROOT}/outputs/C3_symmetric_Binder_2026_07_02"
-RANKED = f"{CAMP}/03_af2/ranked_binderonly.csv"
-SEQDIR = f"{CAMP}/02_mpnn/seqs"
-RFDDIR = f"{CAMP}/01_rfd"
-OUTDIR = f"{CAMP}/04_rosetta"
+RANKED = os.environ.get("RANKED", f"{CAMP}/03_af2/ranked_binderonly.csv")   # round 2: 07_af2/...
+SEQDIR = os.environ.get("SEQDIR", f"{CAMP}/02_mpnn/seqs")                   # round 2: 06_mpnn_buns/seqs
+RFDDIR = f"{CAMP}/01_rfd"                                                   # backbones shared
+OUTDIR = os.environ.get("ROSETTA_DIR", f"{CAMP}/04_rosetta")               # round 2: 08_rosetta
 INDIR  = f"{OUTDIR}/in"
 OUT    = f"{OUTDIR}/interface_metrics.csv"
 os.makedirs(INDIR, exist_ok=True)
